@@ -363,7 +363,7 @@ async function doSearch(){
   countryPickerEl.innerHTML = '';
   detailPanelEl.classList.add('hidden');
   try{
-    const raw = await callApi(`name/${encodeURIComponent(term)}`);
+    const raw = await callApi(`translation/${encodeURIComponent(term)}`);
     renderPicker(raw);
   }catch(err){
     showStatus(`Error: ${err.message}`, 'error');
