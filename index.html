@@ -339,8 +339,10 @@ function hideStatus(){
 
 // Llamada directa sin proxies propensos a errores 408
 async function callApi(endpoint){
-  const url = `https://restcountries.com/v3.1/${endpoint}`;
-  const response = await fetch(url);
+  const targetUrl = `https://restcountries.com/v3.1/${endpoint}`;
+  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+  
+  const response = await fetch(proxyUrl);
   if (!response.ok){
     if (response.status === 404){
       throw new Error('No se encontraron resultados para tu búsqueda.');
