@@ -324,7 +324,6 @@
 </div>
 
 <script>
-let API_KEY = "rc_live_35b0b098115d47b6805665e34d5e9b06";
 let selectedCountry = null;
 
 const statusEl = document.getElementById('status');
@@ -334,18 +333,19 @@ const charPickerEl = document.getElementById('charPicker');
 const stampFieldsEl = document.getElementById('stampFields');
 const chips = document.querySelectorAll('.chip');
 
+// Ajustado para extraer propiedades directamente de la API REST Countries v3.1
 const CHARACTERISTICS = [
-  { id: 'capital',   label: 'Capital',        get: c => (c.capitals && c.capitals[0]?.name) || 'No disponible' },
+  { id: 'capital',   label: 'Capital',        get: c => (c.capital && c.capital[0]) || 'No disponible' },
   { id: 'population', label: 'Población',      get: c => c.population != null ? Number(c.population).toLocaleString('es-MX') : 'No disponible' },
-  { id: 'area',       label: 'Área',           get: c => c.area?.kilometers != null ? `${Number(c.area.kilometers).toLocaleString('es-MX')} km²` : 'No disponible' },
+  { id: 'area',       label: 'Área',           get: c => c.area != null ? `${Number(c.area).toLocaleString('es-MX')} km²` : 'No disponible' },
   { id: 'region',     label: 'Región',         get: c => [c.region, c.subregion].filter(Boolean).join(' · ') || 'No disponible' },
-  { id: 'currency',   label: 'Moneda',         get: c => (c.currencies || []).map(cur => cur.name).join(', ') || 'No disponible' },
-  { id: 'language',   label: 'Idioma',         get: c => (c.languages || []).map(l => l.name).join(', ') || 'No disponible' },
+  { id: 'currency',   label: 'Moneda',         get: c => c.currencies ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ''})`).join(', ') : 'No disponible' },
+  { id: 'language',   label: 'Idioma',         get: c => c.languages ? Object.values(c.languages).join(', ') : 'No disponible' },
   { id: 'borders',    label: 'Fronteras',      get: c => (c.borders || []).join(', ') || 'Sin fronteras terrestres' },
-  { id: 'calling',    label: 'Código telefónico', get: c => (c.calling_codes || []).join(', ') || 'No disponible' },
-  { id: 'code',       label: 'Código ISO',     get: c => c.codes?.alpha_3 || c.codes?.alpha_2 || 'No disponible' },
+  { id: 'calling',    label: 'Código telefónico', get: c => c.idd ? `${c.idd.root || ''}${(c.idd.suffixes || []).join(', ')}` : 'No disponible' },
+  { id: 'code',       label: 'Código ISO',     get: c => c.cca3 || c.cca2 || 'No disponible' },
 ];
-const DEFAULT_SELECTED = [];
+const DEFAULT_SELECTED = ['capital', 'population', 'region'];
 let checkedChars = new Set(DEFAULT_SELECTED);
 
 document.getElementById('searchBtn').addEventListener('click', doSearch);
@@ -373,25 +373,13 @@ function hideStatus(){
   statusEl.className = 'hidden';
 }
 
-function requireKey(){
-  if (!API_KEY || API_KEY === "PON_AQUI_TU_API_KEY"){
-    showStatus('Falta poner tu API key en la constante API_KEY, al inicio del <script> del archivo.', 'error');
-    return false;
-  }
-  return true;
-}
-
-async function callApi(query){
-  const url = `https://api.restcountries.com/countries/v5?${query}`;
-  const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${API_KEY}` }
-  });
+// Llamada adaptada a la API v3.1 oficial, estable y libre de keys
+async function callApi(endpoint){
+  const url = `https://restcountries.com/v3.1/${endpoint}`;
+  const response = await fetch(url);
   if (!response.ok){
-    if (response.status === 401 || response.status === 403){
-      throw new Error('La API rechazó tu clave (401/403). Revisa que la copiaste completa, que no haya sido revocada, o que el hostname esté permitido en CORS.');
-    }
-    if (response.status === 429){
-      throw new Error('Se alcanzó el límite mensual de peticiones (429). El plan gratuito permite 500 al mes.');
+    if (response.status === 404){
+      throw new Error('No se encontraron resultados para tu búsqueda.');
     }
     throw new Error(`La API respondió con error ${response.status}.`);
   }
@@ -404,47 +392,40 @@ async function doSearch(){
     showStatus('Escribe el nombre de un país para buscar.', 'error');
     return;
   }
-  if (!requireKey()) return;
   chips.forEach(c => c.classList.remove('active'));
   showStatus('Consultando la API...', 'loading');
   countryPickerEl.innerHTML = '';
+  detailPanelEl.classList.add('hidden'); // Ocultar detalles anteriores si los hubiera
   try{
-    const raw = await callApi(`q=${encodeURIComponent(term)}`);
-    renderPicker(extractCountries(raw));
+    const raw = await callApi(`name/${encodeURIComponent(term)}`);
+    renderPicker(raw);
   }catch(err){
     showStatus(`Error: ${err.message}`, 'error');
   }
 }
 
 async function searchByRegion(region){
-  if (!requireKey()) return;
   showStatus('Consultando la API...', 'loading');
   countryPickerEl.innerHTML = '';
+  detailPanelEl.classList.add('hidden');
   try{
-    const raw = await callApi(`region=${encodeURIComponent(region)}`);
-    renderPicker(extractCountries(raw));
+    const raw = await callApi(`region/${encodeURIComponent(region)}`);
+    renderPicker(raw);
   }catch(err){
     showStatus(`Error: ${err.message}`, 'error');
   }
 }
 
-function extractCountries(raw){
-  const objects = raw?.data?.objects;
-  if (Array.isArray(objects)) return objects;
-  if (raw?.data && typeof raw.data === 'object') return [raw.data];
-  return [];
-}
-
 function renderPicker(countries){
-  if (!countries.length){
+  if (!countries || !countries.length){
     showStatus('No se encontraron países con ese criterio.', 'error');
     return;
   }
   hideStatus();
   countryPickerEl.classList.remove('hidden');
   countryPickerEl.innerHTML = countries.map((c, i) => {
-    const name = c.names?.common || 'Desconocido';
-    const flag = c.flag?.url_png || c.flag?.url_svg || '';
+    const name = c.translations?.spa?.common || c.name?.common || 'Desconocido';
+    const flag = c.flags?.png || c.flags?.svg || '';
     return `<button type="button" class="pick-item" data-index="${i}">
       ${flag ? `<img src="${flag}" alt="">` : ''}
       <span>${name}</span>
@@ -463,8 +444,8 @@ function openDetail(){
   countryPickerEl.classList.add('hidden');
   detailPanelEl.classList.remove('hidden');
 
-  document.getElementById('selectedFlag').src = selectedCountry.flag?.url_png || selectedCountry.flag?.url_svg || '';
-  document.getElementById('selectedName').textContent = selectedCountry.names?.common || 'Desconocido';
+  document.getElementById('selectedFlag').src = selectedCountry.flags?.png || selectedCountry.flags?.svg || '';
+  document.getElementById('selectedName').textContent = selectedCountry.translations?.spa?.common || selectedCountry.name?.common || 'Desconocido';
 
   checkedChars = new Set(DEFAULT_SELECTED);
   renderCharPicker();
