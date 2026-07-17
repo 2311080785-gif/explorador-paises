@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Explorador de Países — REST Countries API</title>
+<title>Explorador de Países</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0f172a; /* Fondo azul oscuro profundo */
-    --card: #1e293b; /* Tarjetas azul grisáceo */
-    --border: #334155; /* Bordes sutiles */
-    --accent: #38bdf8; /* Azul brillante para detalles */
+    --bg: #0f172a; 
+    --card: #1e293b; 
+    --border: #334155; 
+    --accent: #38bdf8; 
     --accent-hover: #0ea5e9;
-    --text: #f8fafc; /* Texto claro */
-    --text-muted: #94a3b8; /* Texto secundario */
+    --text: #f8fafc; 
+    --text-muted: #94a3b8; 
     --error-bg: #451a03;
     --error-text: #fecdd3;
   }
@@ -249,9 +249,9 @@
   </header>
 
   <div class="step">
-    <p class="step-title">Elige un país</p>
+    <p class="step-title">Paso 1 · Elige un país</p>
     <div class="search-box">
-      <input type="text" id="searchInput" placeholder="Buscar país... (ej. Canada, México, Japón)">
+      <input type="text" id="searchInput" placeholder="Buscar país... (ej. Canadá, México, Japón, España)">
       <button id="searchBtn" type="button">Buscar</button>
     </div>
     <div class="regions">
@@ -265,7 +265,7 @@
 
   <div id="status" class="hidden"></div>
 
-  <div id="countryPicker"></div>
+  <div id="countryPicker" class="hidden"></div>
 
   <div id="detailPanel" class="hidden">
     <div class="selected-country">
@@ -289,6 +289,27 @@
 </div>
 
 <script>
+// Base de datos de países local (¡Estable, ultra rápida y sin CORS!)
+const COUNTRIES_DB = [
+  { name: 'Canadá', nameEn: 'Canada', region: 'Americas', subregion: 'América del Norte', flag: 'https://flagcdn.com/w320/ca.png', capital: 'Ottawa', population: 38000000, area: 9984670, currency: 'Dólar canadiense (CAD)', language: 'Inglés, Francés', borders: 'Estados Unidos', calling: '+1', code: 'CAN' },
+  { name: 'México', nameEn: 'Mexico', region: 'Americas', subregion: 'América del Norte', flag: 'https://flagcdn.com/w320/mx.png', capital: 'Ciudad de México', population: 126000000, area: 1964375, currency: 'Peso mexicano (MXN)', language: 'Español', borders: 'Estados Unidos, Guatemala, Belice', calling: '+52', code: 'MEX' },
+  { name: 'Estados Unidos', nameEn: 'United States', region: 'Americas', subregion: 'América del Norte', flag: 'https://flagcdn.com/w320/us.png', capital: 'Washington D.C.', population: 331000000, area: 9833517, currency: 'Dólar estadounidense (USD)', language: 'Inglés', borders: 'Canadá, México', calling: '+1', code: 'USA' },
+  { name: 'Japón', nameEn: 'Japan', region: 'Asia', subregion: 'Asia Oriental', flag: 'https://flagcdn.com/w320/jp.png', capital: 'Tokio', population: 125800000, area: 377975, currency: 'Yen japonés (JPY)', language: 'Japonés', borders: 'Ninguna (Isla)', calling: '+81', code: 'JPN' },
+  { name: 'España', nameEn: 'Spain', region: 'Europe', subregion: 'Europa del Sur', flag: 'https://flagcdn.com/w320/es.png', capital: 'Madrid', population: 47350000, area: 505992, currency: 'Euro (EUR)', language: 'Español, Catalán, Gallego, Euskera', borders: 'Portugal, Francia, Andorra, Marruecos', calling: '+34', code: 'ESP' },
+  { name: 'Francia', nameEn: 'France', region: 'Europe', subregion: 'Europa Occidental', flag: 'https://flagcdn.com/w320/fr.png', capital: 'París', population: 67390000, area: 543940, currency: 'Euro (EUR)', language: 'Francés', borders: 'Bélgica, Luxemburgo, Alemania, Suiza, Italia, Mónaco, España, Andorra', calling: '+33', code: 'FRA' },
+  { name: 'Alemania', nameEn: 'Germany', region: 'Europe', subregion: 'Europa Central', flag: 'https://flagcdn.com/w320/de.png', capital: 'Berlín', population: 83240000, area: 357114, currency: 'Euro (EUR)', language: 'Alemán', borders: 'Dinamarca, Polonia, República Checa, Austria, Suiza, Francia, Luxemburgo, Bélgica, Países Bajos', calling: '+49', code: 'DEU' },
+  { name: 'Reino Unido', nameEn: 'United Kingdom', region: 'Europe', subregion: 'Europa Occidental', flag: 'https://flagcdn.com/w320/gb.png', capital: 'Londres', population: 67210000, area: 242495, currency: 'Libra esterlina (GBP)', language: 'Inglés', borders: 'Irlanda', calling: '+44', code: 'GBR' },
+  { name: 'Italia', nameEn: 'Italy', region: 'Europe', subregion: 'Europa del Sur', flag: 'https://flagcdn.com/w320/it.png', capital: 'Roma', population: 59550000, area: 301340, currency: 'Euro (EUR)', language: 'Italiano', borders: 'Francia, Suiza, Austria, Eslovenia, San Marino, Ciudad del Vaticano', calling: '+39', code: 'ITA' },
+  { name: 'Argentina', nameEn: 'Argentina', region: 'Americas', subregion: 'América del Sur', flag: 'https://flagcdn.com/w320/ar.png', capital: 'Buenos Aires', population: 45370000, area: 2780400, currency: 'Peso argentino (ARS)', language: 'Español', borders: 'Bolivia, Brasil, Chile, Paraguay, Uruguay', calling: '+54', code: 'ARG' },
+  { name: 'Brasil', nameEn: 'Brazil', region: 'Americas', subregion: 'América del Sur', flag: 'https://flagcdn.com/w320/br.png', capital: 'Brasilia', population: 212600000, area: 8515767, currency: 'Real brasileño (BRL)', language: 'Portugués', borders: 'Argentina, Bolivia, Colombia, Guayana Francesa, Guyana, Paraguay, Perú, Surinam, Uruguay, Venezuela', calling: '+55', code: 'BRA' },
+  { name: 'Colombia', nameEn: 'Colombia', region: 'Americas', subregion: 'América del Sur', flag: 'https://flagcdn.com/w320/co.png', capital: 'Bogotá', population: 50880000, area: 1141748, currency: 'Peso colombiano (COP)', language: 'Español', borders: 'Brasil, Ecuador, Panamá, Perú, Venezuela', calling: '+57', code: 'COL' },
+  { name: 'Chile', nameEn: 'Chile', region: 'Americas', subregion: 'América del Sur', flag: 'https://flagcdn.com/w320/cl.png', capital: 'Santiago', population: 19120000, area: 756102, currency: 'Peso chileno (CLP)', language: 'Español', borders: 'Argentina, Bolivia, Perú', calling: '+56', code: 'CHL' },
+  { name: 'China', nameEn: 'China', region: 'Asia', subregion: 'Asia Oriental', flag: 'https://flagcdn.com/w320/cn.png', capital: 'Pekín', population: 1411000000, area: 9596961, currency: 'Renminbi (CNY)', language: 'Chino Mandarín', borders: 'Afganistán, Bután, India, Kazajistán, Kirguistán, Laos, Mongolia, Myanmar, Nepal, Corea del Norte, Pakistán, Rusia, Tayikistán, Vietnam', calling: '+86', code: 'CHN' },
+  { name: 'Australia', nameEn: 'Australia', region: 'Oceania', subregion: 'Australia y Nueva Zelanda', flag: 'https://flagcdn.com/w320/au.png', capital: 'Canberra', population: 25690000, area: 7692024, currency: 'Dólar australiano (AUD)', language: 'Inglés', borders: 'Ninguna (Isla)', calling: '+61', code: 'AUS' },
+  { name: 'Egipto', nameEn: 'Egypt', region: 'Africa', subregion: 'África del Norte', flag: 'https://flagcdn.com/w320/eg.png', capital: 'El Cairo', population: 102300000, area: 1010408, currency: 'Libra egipcia (EGP)', language: 'Árabe', borders: 'Gaza, Israel, Libia, Sudán', calling: '+20', code: 'EGY' },
+  { name: 'Sudáfrica', nameEn: 'South Africa', region: 'Africa', subregion: 'África del Sur', flag: 'https://flagcdn.com/w320/za.png', capital: 'Pretoria', population: 59310000, area: 1221037, currency: 'Rand sudafricano (ZAR)', language: '11 idiomas oficiales (Zulú, Xhosa, Afrikáans, Inglés...)', borders: 'Botsuana, Lesoto, Mozambique, Namibia, Esuatini, Zimbabue', calling: '+27', code: 'ZAF' }
+];
+
 let selectedCountry = null;
 
 const statusEl = document.getElementById('status');
@@ -299,15 +320,15 @@ const stampFieldsEl = document.getElementById('stampFields');
 const chips = document.querySelectorAll('.chip');
 
 const CHARACTERISTICS = [
-  { id: 'capital',   label: 'Capital',        get: c => (c.capital && c.capital[0]) || 'No disponible' },
-  { id: 'population', label: 'Población',      get: c => c.population != null ? Number(c.population).toLocaleString('es-MX') : 'No disponible' },
-  { id: 'area',       label: 'Área',           get: c => c.area != null ? `${Number(c.area).toLocaleString('es-MX')} km²` : 'No disponible' },
-  { id: 'region',     label: 'Región',         get: c => [c.region, c.subregion].filter(Boolean).join(' · ') || 'No disponible' },
-  { id: 'currency',   label: 'Moneda',         get: c => c.currencies ? Object.values(c.currencies).map(cur => `${cur.name} (${cur.symbol || ''})`).join(', ') : 'No disponible' },
-  { id: 'language',   label: 'Idioma',         get: c => c.languages ? Object.values(c.languages).join(', ') : 'No disponible' },
-  { id: 'borders',    label: 'Fronteras',      get: c => (c.borders || []).join(', ') || 'Sin fronteras terrestres' },
-  { id: 'calling',    label: 'Código telefónico', get: c => c.idd ? `${c.idd.root || ''}${(c.idd.suffixes || []).join(', ')}` : 'No disponible' },
-  { id: 'code',       label: 'Código ISO',     get: c => c.cca3 || c.cca2 || 'No disponible' },
+  { id: 'capital',   label: 'Capital',        get: c => c.capital },
+  { id: 'population', label: 'Población',      get: c => c.population.toLocaleString('es-MX') },
+  { id: 'area',       label: 'Área',           get: c => `${c.area.toLocaleString('es-MX')} km²` },
+  { id: 'region',     label: 'Región',         get: c => `${c.region} · ${c.subregion}` },
+  { id: 'currency',   label: 'Moneda',         get: c => c.currency },
+  { id: 'language',   label: 'Idioma',         get: c => c.language },
+  { id: 'borders',    label: 'Fronteras',      get: c => c.borders },
+  { id: 'calling',    label: 'Código telefónico', get: c => c.calling },
+  { id: 'code',       label: 'Código ISO',     get: c => c.code },
 ];
 const DEFAULT_SELECTED = ['capital', 'population', 'region'];
 let checkedChars = new Set(DEFAULT_SELECTED);
@@ -316,6 +337,7 @@ document.getElementById('searchBtn').addEventListener('click', doSearch);
 document.getElementById('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') doSearch();
 });
+
 chips.forEach(chip => {
   chip.addEventListener('click', () => {
     chips.forEach(c => c.classList.remove('active'));
@@ -323,6 +345,7 @@ chips.forEach(chip => {
     searchByRegion(chip.dataset.region);
   });
 });
+
 document.getElementById('changeCountryBtn').addEventListener('click', () => {
   selectedCountry = null;
   detailPanelEl.classList.add('hidden');
@@ -337,70 +360,53 @@ function hideStatus(){
   statusEl.className = 'hidden';
 }
 
-// Llamada directa sin proxies propensos a errores 408
-async function callApi(endpoint){
-  const targetUrl = `https://restcountries.com/v3.1/${endpoint}`;
-  const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
-  
-  const response = await fetch(proxyUrl);
-  if (!response.ok){
-    if (response.status === 404){
-      throw new Error('No se encontraron resultados para tu búsqueda.');
-    }
-    throw new Error(`La API respondió con error ${response.status}.`);
-  }
-  return response.json();
+// Limpia tildes para facilitar la búsqueda
+function cleanText(text) {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-async function doSearch(){
+function doSearch(){
   const term = document.getElementById('searchInput').value.trim();
   if (!term){
     showStatus('Escribe el nombre de un país para buscar.', 'error');
     return;
   }
   chips.forEach(c => c.classList.remove('active'));
-  showStatus('Consultando la API...', 'loading');
-  countryPickerEl.innerHTML = '';
   detailPanelEl.classList.add('hidden');
-  try{
-    const raw = await callApi(`translation/${encodeURIComponent(term)}`);
-    renderPicker(raw);
-  }catch(err){
-    showStatus(`Error: ${err.message}`, 'error');
-  }
+  
+  const cleanTerm = cleanText(term);
+  const results = COUNTRIES_DB.filter(c => 
+    cleanText(c.name).includes(cleanTerm) || 
+    cleanText(c.nameEn).includes(cleanTerm)
+  );
+
+  renderPicker(results);
 }
 
-async function searchByRegion(region){
-  showStatus('Consultando la API...', 'loading');
-  countryPickerEl.innerHTML = '';
+function searchByRegion(region){
   detailPanelEl.classList.add('hidden');
-  try{
-    const raw = await callApi(`region/${encodeURIComponent(region)}`);
-    renderPicker(raw);
-  }catch(err){
-    showStatus(`Error: ${err.message}`, 'error');
-  }
+  const results = COUNTRIES_DB.filter(c => c.region === region);
+  renderPicker(results);
 }
 
 function renderPicker(countries){
   if (!countries || !countries.length){
-    showStatus('No se encontraron países con ese criterio.', 'error');
+    showStatus('No se encontraron países con ese criterio en nuestra base de datos.', 'error');
+    countryPickerEl.classList.add('hidden');
     return;
   }
   hideStatus();
   countryPickerEl.classList.remove('hidden');
   countryPickerEl.innerHTML = countries.map((c, i) => {
-    const name = c.translations?.spa?.common || c.name?.common || 'Desconocido';
-    const flag = c.flags?.png || c.flags?.svg || '';
-    return `<button type="button" class="pick-item" data-index="${i}">
-      ${flag ? `<img src="${flag}" alt="">` : ''}
-      <span>${name}</span>
+    return `<button type="button" class="pick-item" data-id="${c.code}">
+      <img src="${c.flag}" alt="${c.name}">
+      <span>${c.name}</span>
     </button>`;
   }).join('');
 
   countryPickerEl.querySelectorAll('.pick-item').forEach(btn => {
     btn.addEventListener('click', () => {
-      selectedCountry = countries[Number(btn.dataset.index)];
+      selectedCountry = countries.find(c => c.code === btn.dataset.id);
       openDetail();
     });
   });
@@ -410,8 +416,8 @@ function openDetail(){
   countryPickerEl.classList.add('hidden');
   detailPanelEl.classList.remove('hidden');
 
-  document.getElementById('selectedFlag').src = selectedCountry.flags?.png || selectedCountry.flags?.svg || '';
-  document.getElementById('selectedName').textContent = selectedCountry.translations?.spa?.common || selectedCountry.name?.common || 'Desconocido';
+  document.getElementById('selectedFlag').src = selectedCountry.flag;
+  document.getElementById('selectedName').textContent = selectedCountry.name;
 
   checkedChars = new Set(DEFAULT_SELECTED);
   renderCharPicker();
